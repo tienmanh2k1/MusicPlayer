@@ -34,12 +34,15 @@ dependencies {
     implementation 'com.google.android.material:material:1.8.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 
+    //exoplayer
     implementation 'com.google.android.exoplayer:exoplayer:2.18.5'
 
+    implementation 'com.squareup.picasso:picasso:2.8'
+    //circle image
     implementation 'de.hdodenhof:circleimageview:3.1.0'
-
+    //audio visualizer
     implementation 'io.github.gautamchibde:audiovisualizer:2.2.5'
-
+    //for palettes for extracting colors
     implementation 'androidx.palette:palette:1.0.0'
 
     implementation 'com.github.jgabrielfreitas:BlurImageView:1.0.1'

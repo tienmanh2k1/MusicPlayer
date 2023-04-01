@@ -1,7 +1,10 @@
 package com.aptech.musicplayer;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,11 +15,13 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.MediaMetadata;
+import com.squareup.picasso.Picasso;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -65,16 +70,19 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         if (artworkUri != null){
             //set the uri to image view
-            viewHolder.artworkHolder.setImageResource(R.drawable.song_bg);
+            //viewHolder.artworkHolder.setImageURI(artworkUri);
+            Picasso.get().load(artworkUri).into(viewHolder.artworkHolder);
 
             //make sure that uri has an work
             if (viewHolder.artworkHolder.getDrawable() == null){
-                viewHolder.artworkHolder.setImageResource(R.drawable.song_bg);
+               viewHolder.artworkHolder.setImageResource(R.drawable.song_bg);
             }
         }
 
         //player song on item click
         viewHolder.itemView.setOnClickListener(view -> {
+            //start player service
+            context.startService(new Intent(context.getApplicationContext(),PlayerService.class));
             //playing song
             if (!player.isPlaying()){
                 player.setMediaItems(getMediaItem(),position,0);
@@ -90,6 +98,12 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
             //show player view
             playerView.setVisibility(View.VISIBLE);
+
+            //check if the record audio permission is granted
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED){
+                //request the record audio perm
+                ((MainActivity)context).recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+            };
         });
     }
 
@@ -152,7 +166,7 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         int hrs = totalDuration/(1000*60*60);
         int min = (totalDuration%(1000*60*60))/(1000*60);
-        int secs = (((totalDuration%(1000*60*60))%(1000*60*60))%(1000*600))/1000;
+        int secs = ((totalDuration%(1000*60*60))%(1000*60))/1000;
 
         if (hrs < 1){
             totalDurationText = String.format("%02d:%02d",min,secs);
@@ -175,15 +189,15 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         //the format
         DecimalFormat decimalFormat = new DecimalFormat("0.00");
         if (t>1){
-            hrSize = decimalFormat.format(t).concat("TB");
+            hrSize = decimalFormat.format(t).concat(" TB");
         } else if (g>1) {
-            hrSize = decimalFormat.format(g).concat("GB");
+            hrSize = decimalFormat.format(g).concat(" GB");
         }else if (m>1) {
-            hrSize = decimalFormat.format(m).concat("MB");
+            hrSize = decimalFormat.format(m).concat(" MB");
         }else if (k>1) {
-            hrSize = decimalFormat.format(k).concat("KB");
+            hrSize = decimalFormat.format(k).concat(" KB");
         }else {
-            hrSize = decimalFormat.format(g).concat("Bytes");
+            hrSize = decimalFormat.format(g).concat(" Bytes");
         }
         return hrSize;
     }

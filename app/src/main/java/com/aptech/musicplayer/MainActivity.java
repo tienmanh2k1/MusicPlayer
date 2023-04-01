@@ -1,17 +1,28 @@
 package com.aptech.musicplayer;
 
 import android.Manifest;
+import android.content.ComponentName;
 import android.content.ContentUris;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
 import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.RotateAnimation;
 import android.widget.SearchView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -26,6 +37,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
+import androidx.palette.graphics.Palette;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -34,6 +46,7 @@ import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.Player;
 import com.jgabrielfreitas.core.BlurImageView;
+import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,6 +85,8 @@ public class MainActivity extends AppCompatActivity {
     int defaultStatusColor;
     //repeat mode
     int repeatMode = 1;
+    //is the act. bound?
+    boolean isBound = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,8 +114,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //launch storage permission on create
-        storagePermissionLauncher.launch(permission);
 
         //record audio permission
         recordAudioPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(),granted->{
@@ -113,12 +126,12 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //view
-        player = new ExoPlayer.Builder(this).build();
+        //player = new ExoPlayer.Builder(this).build();
         playerView = findViewById(R.id.playerView);
         playerCloseBtn = findViewById(R.id.playerCloseBtn);
         songNameView = findViewById(R.id.songNameView);
         skipPreviousBtn = findViewById(R.id.skipPreviousBtn);
-        skipNextBtn = findViewById(R.id.homeSkipNextBtn);
+        skipNextBtn = findViewById(R.id.skipNextBtn);
         playPauseBtn = findViewById(R.id.playPauseBtn);
         repeatModeBtn = findViewById(R.id.repeatModeBtn);
         playListBtn = findViewById(R.id.playListBtn);
@@ -145,13 +158,53 @@ public class MainActivity extends AppCompatActivity {
 
         //audio visualizer
         audioVisualizer = findViewById(R.id.visualizer);
+
         //blur image view
         blurImageView = findViewById(R.id.blurImageView);
 
+        //launch storage permission on create
+        //storagePermissionLauncher.launch(permission);
+
         //player controls method
-        playerControls();
+        //playerControls();
 
+        //bind to the player service , and do every thing after binding
+        doBinderService();
+    }
 
+    private void doBinderService() {
+        Intent playerServiceIntent = new Intent(this,PlayerService.class);
+        bindService(playerServiceIntent,playerServiceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    ServiceConnection playerServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder iBinder) {
+            //get the service instance
+            PlayerService.ServiceBinder serviceBinder = (PlayerService.ServiceBinder) iBinder;
+            player = serviceBinder.getPlayerService().player;
+            isBound = true;
+
+            //ready to show song
+            storagePermissionLauncher.launch(permission);
+            //call player control method
+            playerControls();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+        }
+    };
+
+    @Override
+    public void onBackPressed() {
+        //we say if the player view is visible ,close it
+        if (playerView.getVisibility() == View.VISIBLE){
+            exitPlayerView();
+        }else {
+            super.onBackPressed();
+        }
     }
 
     private void playerControls() {
@@ -185,31 +238,192 @@ public class MainActivity extends AppCompatActivity {
                 //show the current art work
                 showCurrentArtWork();
 
+                //update the process position of a current playing song
+                updatePlayerPositionProcess();
+
+                //load artwork animation
+                artworkView.setAnimation(loadRotation());
+
+                //set audio visualizer
+                activateAudioVisualizer();
+
+                //update player view color
+                updatePlayerColors();
+
+                if (!player.isPlaying()){
+                    player.play();
+                }
+
             }
 
             @Override
             public void onPlaybackStateChanged(int playbackState) {
                 Player.Listener.super.onPlaybackStateChanged(playbackState);
+                if (playbackState == ExoPlayer.STATE_READY){
+                    //set values to player view
+                    songNameView.setText(Objects.requireNonNull(player.getCurrentMediaItem()).mediaMetadata.title);
+                    homeSongNameView.setText(player.getCurrentMediaItem().mediaMetadata.title);
+                    processView.setText(getReadableTime((int) player.getCurrentPosition()));
+                    durationView.setText(getReadableTime((int) player.getDuration()));
+                    seekBar.setMax((int) player.getDuration());
+                    seekBar.setProgress((int) player.getCurrentPosition());
+
+                    playPauseBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pause_circle_outline,0,0,0);
+                    homePlayPauseBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pause,0,0,0);
+
+                    //show the current art work
+                    showCurrentArtWork();
+
+                    //update the process position of a current playing song
+                    updatePlayerPositionProcess();
+
+                    //load artwork animation
+                    artworkView.setAnimation(loadRotation());
+
+                    //set audio visualizer
+                    activateAudioVisualizer();
+
+                    //update player view color
+                    updatePlayerColors();
+                }
+                else {
+                    playPauseBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_play_circle_outline,0,0,0);
+                    homePlayPauseBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_play,0,0,0);
+                }
             }
+        });
+
+        //skip to next track
+        skipNextBtn.setOnClickListener(view -> skipToNextSong());
+        homeSkipNextBtn.setOnClickListener(view -> skipToNextSong());
+        //skip to previous track
+        skipPreviousBtn.setOnClickListener(view -> skipToPreviousSong());
+        homeSkipPreviousBtn.setOnClickListener(view -> skipToPreviousSong());
+
+        //play or pause the player
+        playPauseBtn.setOnClickListener(view -> playOrPausePlayer());
+        homePlayPauseBtn.setOnClickListener(view -> playOrPausePlayer());
+
+        //seekbar listener
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            int processValue = 0;
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                processValue = seekBar.getProgress();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                if (player.getPlaybackState() == ExoPlayer.STATE_READY){
+                    seekBar.setProgress(processValue);
+                    processView.setText(getReadableTime(processValue));
+                    player.seekTo(processValue);
+                }
+            }
+        });
+
+        //repeat mode
+        repeatModeBtn.setOnClickListener(view -> {
+            if (repeatMode == 1){
+                //repeat one
+                player.setRepeatMode(ExoPlayer.REPEAT_MODE_ONE);
+                repeatMode = 2;
+                repeatModeBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_repeat_one,0,0,0);
+            }else if(repeatMode == 2) {
+                //shuffle all
+                player.setShuffleModeEnabled(true);
+                player.setRepeatMode(Player.REPEAT_MODE_ALL);
+                repeatMode = 3;
+                repeatModeBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_shuffle,0,0,0);
+            }else if(repeatMode == 3){
+                //repeat all
+                player.setRepeatMode(ExoPlayer.REPEAT_MODE_ALL);
+                player.setShuffleModeEnabled(false);
+                repeatMode = 1;
+                repeatModeBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_repeat,0,0,0);
+            }
+
+            //update color
+            updatePlayerColors();
         });
     }
 
-    private void showCurrentArtWork() {
-        artworkView.setImageURI(Objects.requireNonNull(player.getCurrentMediaItem()).mediaMetadata.artworkUri);
+    private void playOrPausePlayer() {
+        if (player.isPlaying()){
+            player.pause();
+            playPauseBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_play_circle_outline,0,0,0);
+            homePlayPauseBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_play,0,0,0);
+            artworkView.clearAnimation();
+        }else {
+            player.play();
+            playPauseBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pause_circle_outline,0,0,0);
+            homePlayPauseBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pause,0,0,0);
+            artworkView.startAnimation(loadRotation());
+        }
 
+        //update player color
+        updatePlayerColors();
+    }
+
+    private void skipToNextSong() {
+        if (player.hasNextMediaItem()){
+            player.seekToNext();
+        }
+    }
+
+    private void skipToPreviousSong() {
+        if (player.hasPreviousMediaItem()){
+            player.seekToPrevious();
+        }
+    }
+
+    private Animation loadRotation() {
+        RotateAnimation rotateAnimation = new RotateAnimation(0,360,Animation.RELATIVE_TO_SELF,0.5f,Animation.RELATIVE_TO_SELF,0.5f);
+        rotateAnimation.setInterpolator(new LinearInterpolator());
+        rotateAnimation.setDuration(10000);
+        rotateAnimation.setRepeatCount(Animation.INFINITE);
+        return rotateAnimation;
+    }
+
+    private void updatePlayerPositionProcess() {
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (player.isPlaying()){
+                    processView.setText(getReadableTime((int) player.getCurrentPosition()));
+                    seekBar.setProgress((int) player.getCurrentPosition());
+
+                    //repeat calling the method
+                    updatePlayerPositionProcess();
+                }
+            }
+        },1000);
+    }
+
+    private void showCurrentArtWork() {
+       // artworkView.setImageURI(Objects.requireNonNull(player.getCurrentMediaItem()).mediaMetadata.artworkUri);
+        Picasso.get().load(Objects.requireNonNull(player.getCurrentMediaItem()).mediaMetadata.artworkUri).into(artworkView);
         if (artworkView.getDrawable() == null){
             artworkView.setImageResource(R.drawable.default_bg);
         }
     }
 
     private String getReadableTime(int totalDuration) {
+
         String time;
+
         int hrs = totalDuration/(1000*60*60);
         int min = (totalDuration%(1000*60*60))/(1000*60);
-        int secs = (((totalDuration%(1000*60*60))%(1000*60*60))%(1000*60))/1000;
+        int secs = ((totalDuration%(1000*60*60))%(1000*60))/1000;
 
         if (hrs < 1){time = min + " : " + secs;}
         else {time = hrs + " : " + min + " : " + secs;}
+
         return time;
     }
 
@@ -219,6 +433,57 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updatePlayerColors() {
+        //only player view visible
+        if (playerView.getVisibility() == View.GONE )
+            return;
+
+        BitmapDrawable bitmapDrawable = (BitmapDrawable) artworkView.getDrawable();
+        if (bitmapDrawable == null){
+            bitmapDrawable = (BitmapDrawable) ContextCompat.getDrawable(this,R.drawable.artwork);
+
+        }
+        assert bitmapDrawable != null;
+        Bitmap bitmap = bitmapDrawable.getBitmap();
+
+        //set bitmap to blur image view
+        blurImageView.setImageBitmap(bitmap);
+        blurImageView.setBlur(5);
+
+        //player control color
+        Palette.from(bitmap).generate(palette -> {
+           if (palette != null){
+               Palette.Swatch swatch = palette.getDarkVibrantSwatch();
+               if (swatch == null){
+                   swatch = palette.getMutedSwatch();
+                   if (swatch == null){
+                       swatch = palette.getDominantSwatch();
+                   }
+               }
+
+               //extract text colors
+               assert swatch != null;
+               int titleTextColor = swatch.getTitleTextColor();
+               int bodyTextColor = swatch.getBodyTextColor();
+               int rgbColor = swatch.getRgb();
+
+               //setColor to player view
+               //status & navigation bar colors
+               getWindow().setStatusBarColor(rgbColor);
+               getWindow().setNavigationBarColor(rgbColor);
+
+               //more view color
+               songNameView.setTextColor(titleTextColor);
+               playerCloseBtn.getCompoundDrawables()[0].setTint(titleTextColor);
+               processView.setTextColor(bodyTextColor);
+               durationView.setTextColor(bodyTextColor);
+
+               repeatModeBtn.getCompoundDrawables()[0].setTint(rgbColor);
+               skipPreviousBtn.getCompoundDrawables()[0].setTint(rgbColor);
+               skipNextBtn.getCompoundDrawables()[0].setTint(rgbColor);
+               playPauseBtn.getCompoundDrawables()[0].setTint(rgbColor);
+               playListBtn.getCompoundDrawables()[0].setTint(rgbColor);
+           }
+        });
     }
 
     private void exitPlayerView() {
@@ -228,46 +493,64 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void userResponsesOnRecordAudioPerm() {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
-            if (shouldShowRequestPermissionRationale(recordAudioPermission)){
-                //show an educational UI explaining why we need this permission
-                 //use alert dialog
-                new AlertDialog.Builder(this)
-                        .setTitle("Requesting to show Audio visualizer")
-                        .setMessage("Allow tis app to do display audio visualizer when music is playing")
-                        .setPositiveButton("allow", (dialog, which) -> {
-                            //request the perm
-                            recordAudioPermissionLauncher.launch(recordAudioPermission);
-                        })
-                        .setNegativeButton("No",(dialogInterface,i)->{
-                            Toast.makeText(getApplicationContext(),"you denied to show the audio visualizer",Toast.LENGTH_SHORT).show();
-                        })
-                        .show();
-            }else {
-                Toast.makeText(getApplicationContext(),"you denied to show the audio visualizer",Toast.LENGTH_SHORT).show();
-            }
+        if (shouldShowRequestPermissionRationale(recordAudioPermission)){
+            //show an educational UI explaining why we need this permission
+             //use alert dialog
+            new AlertDialog.Builder(this)
+                    .setTitle("Requesting to show Audio visualizer")
+                    .setMessage("Allow tis app to do display audio visualizer when music is playing")
+                    .setPositiveButton("allow", (dialog, which) -> {
+                        //request the perm
+                        recordAudioPermissionLauncher.launch(recordAudioPermission);
+                    })
+                    .setNegativeButton("No",(dialogInterface,i)->{
+                        Toast.makeText(getApplicationContext(),"you denied to show the audio visualizer",Toast.LENGTH_SHORT).show();
+                    })
+                    .show();
+        }else {
+            Toast.makeText(getApplicationContext(),"you denied to show the audio visualizer",Toast.LENGTH_SHORT).show();
         }
     }
 
     //audio visualizer
     private void activateAudioVisualizer() {
+        //check if we have record audio permission to show an audio visualizer
+        if (ContextCompat.checkSelfPermission(this,recordAudioPermission) != PackageManager.PERMISSION_GRANTED){
+            return;
+        }
+
+        //set color the audio visualizer
+        audioVisualizer.setColor(ContextCompat.getColor(this,R.color.secondary_color));
+        //set number of visualizer btn 10 & 256
+        audioVisualizer.setDensity(20);
+        //set the audio session id from the player
+        audioVisualizer.setPlayer(player.getAudioSessionId());
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         //release the player
-        if (player.isPlaying()){
-            player.stop();
+//        if (player.isPlaying()){
+//            player.stop();
+//        }
+//        player.release();
+
+        doUnbindService();
+    }
+
+    private void doUnbindService() {
+        if (isBound){
+            unbindService(playerServiceConnection);
+            isBound = false;
         }
-        player.release();
     }
 
     private void userResponses() {
         if (ContextCompat.checkSelfPermission(this,permission) == PackageManager.PERMISSION_GRANTED){
             //fetch song
             fetchSong();
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        } else {
             if (shouldShowRequestPermissionRationale(permission)){
                 //show an education UI to user explaining why we need this permission
                 //user alert dialog
@@ -289,8 +572,6 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }).show();
             }
-        }else {
-            Toast.makeText(this,"you canceled to show songs",Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -298,7 +579,7 @@ public class MainActivity extends AppCompatActivity {
 
         //define a list cary songs
         List<Song> songs = new ArrayList<>();
-        Uri mediaStoreUri;
+        Uri mediaStoreUri ;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
             mediaStoreUri = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
@@ -317,9 +598,11 @@ public class MainActivity extends AppCompatActivity {
 
         //oder
         String sortOder = MediaStore.Audio.Media.DATE_ADDED + " DESC";
+        String selection = MediaStore.Audio.Media.DATA + " like ?";
+        String[] selectionArgs = new String[]{"%Music%"};
 
         //get the songs
-        try (Cursor cursor = getContentResolver().query(mediaStoreUri,projection,null,null,sortOder)) {
+        try (Cursor cursor = getContentResolver().query(mediaStoreUri,projection,selection,selectionArgs,sortOder)) {
             //cache cursor indices
             int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID);
             int nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME);
@@ -340,20 +623,21 @@ public class MainActivity extends AppCompatActivity {
                 Uri uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,id);
 
                 //album artwork uri
-                Uri albumArtworkUri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"),albumId);
+                Uri albumArtworkUri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), albumId);
 
                 //remove .mp3 extension from the song name
                 name = name.substring(0,name.lastIndexOf("."));
 
                 //song item
-                Song song = new Song(name,uri,albumArtworkUri,size,duration);
+                Song song = new Song(name,uri,albumArtworkUri,duration,size);
 
                 //add song to list
                 songs.add(song);
-
             }
                 //display song
                 showSongs(songs);
+        }catch (Exception e){
+            System.out.println(e);
         }
 
     }
