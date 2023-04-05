@@ -56,6 +56,7 @@ import de.hdodenhof.circleimageview.CircleImageView;
 
 public class MainActivity extends AppCompatActivity {
 
+
     RecyclerView recyclerView;
     SongAdapter songAdapter;
     List<Song> allSong = new ArrayList<>();
@@ -594,6 +595,7 @@ public class MainActivity extends AppCompatActivity {
                 MediaStore.Audio.Media.DURATION,
                 MediaStore.Audio.Media.SIZE,
                 MediaStore.Audio.Media.ALBUM_ID,
+                MediaStore.Audio.Media.ARTIST,
         };
 
         //oder
@@ -609,6 +611,7 @@ public class MainActivity extends AppCompatActivity {
             int durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION);
             int sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE);
             int albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID);
+            int artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST);
 
             //clear the previous loaded before adding loading again
             while (cursor.moveToNext()){
@@ -618,6 +621,7 @@ public class MainActivity extends AppCompatActivity {
                 int duration = cursor.getInt(durationColumn);
                 int size = cursor.getInt(sizeColumn);
                 long albumId = cursor.getLong(albumColumn);
+                String artist = cursor.getString(artistColumn);
 
                 //song uri
                 Uri uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,id);
@@ -629,7 +633,7 @@ public class MainActivity extends AppCompatActivity {
                 name = name.substring(0,name.lastIndexOf("."));
 
                 //song item
-                Song song = new Song(name,uri,albumArtworkUri,duration,size);
+                Song song = new Song(name,uri,albumArtworkUri,duration,size,artist);
 
                 //add song to list
                 songs.add(song);
@@ -673,7 +677,6 @@ public class MainActivity extends AppCompatActivity {
         //search btn item
         MenuItem menuItem = menu.findItem(R.id.search_btn);
         SearchView searchView = (SearchView) menuItem.getActionView();
-
 
         //search song method
         SearchSong(searchView);

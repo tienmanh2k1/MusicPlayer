@@ -43,6 +43,18 @@
                     android:paddingTop="@dimen/sm"
                     android:maxLines="1"
                     android:textStyle="bold"/>
+                <TextView
+                    android:id="@+id/artistView"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toEndOf="@+id/artworkView"
+                    android:text="Khong biet"
+                    android:textSize="15sp"
+                    android:layout_marginBottom="2dp"
+                    android:layout_marginStart="8dp"
+                    android:paddingTop="25dp"
+                    android:maxLines="1"/>
                 
                 <TextView
                     android:id="@+id/durationView"

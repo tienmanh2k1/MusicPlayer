@@ -61,17 +61,19 @@ public class PlayerService extends Service {
 
         //notification manager
         final String chanelId = getResources().getString(R.string.app_name) + "Music Channel";
-        final int notificationId = 11111111;
+        final int notificationId = 1111111;
         playerNotificationManager = new PlayerNotificationManager.Builder(this,notificationId,chanelId)
                 .setNotificationListener(notificationListener)
                 .setMediaDescriptionAdapter(descriptionAdapter)
                 .setChannelImportance(IMPORTANCE_HIGH)
-                .setSmallIconResourceId(R.drawable.ic_pause)
+                .setSmallIconResourceId(R.drawable.ic_notifications)
                 .setChannelDescriptionResourceId(R.string.app_name)
                 .setNextActionIconResourceId(R.drawable.ic_skip_next)
                 .setPreviousActionIconResourceId(R.drawable.ic_skip_previous)
                 .setPauseActionIconResourceId(R.drawable.ic_pause)
                 .setPlayActionIconResourceId(R.drawable.ic_play)
+                .setStopActionIconResourceId(R.drawable.ic_close)
+                .setChannelNameResourceId(R.string.app_name)
                 .build();
 
 
@@ -80,6 +82,7 @@ public class PlayerService extends Service {
         playerNotificationManager.setPriority(NotificationCompat.PRIORITY_MAX);
         playerNotificationManager.setUseRewindAction(false);
         playerNotificationManager.setUseFastForwardAction(false);
+        playerNotificationManager.setUseStopAction(false);
     }
 
     @Override
@@ -108,7 +111,7 @@ public class PlayerService extends Service {
         @Override
         public void onNotificationPosted(int notificationId, Notification notification, boolean ongoing) {
             PlayerNotificationManager.NotificationListener.super.onNotificationPosted(notificationId, notification, ongoing);
-            startForeground(notificationId,notification);
+                startForeground(notificationId,notification);
         }
     };
 

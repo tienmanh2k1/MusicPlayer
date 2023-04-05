@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "719110874995",
+    "project_id": "musicplayer-30ce9",
+    "storage_bucket": "musicplayer-30ce9.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:719110874995:android:0325f391464a36f41a8706",
+        "android_client_info": {
+          "package_name": "com.aptech.musicplayer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "719110874995-p0igpk0nqor8alp1ak6kqteqf6hf0bkl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBI_bjFeuZwTxBrG0k8sL8j4g7kChpUN6E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "719110874995-p0igpk0nqor8alp1ak6kqteqf6hf0bkl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

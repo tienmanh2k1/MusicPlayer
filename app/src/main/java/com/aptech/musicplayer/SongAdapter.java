@@ -64,6 +64,7 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         viewHolder.titleHolder.setText(song.getTitle());
         viewHolder.durationHolder.setText(getDuration(song.getDuration()));
         viewHolder.sizeHolder.setText(getSize(song.getSize()));
+        viewHolder.artistHolder.setText(song.getArtist());
 
         //artwork
         Uri artworkUri = song.getArtworkUri();
@@ -127,6 +128,7 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private MediaMetadata getMetadata(Song song) {
         return new MediaMetadata.Builder()
                 .setTitle(song.getTitle())
+                .setArtist(song.getArtist())
                 .setArtworkUri(song.getArtworkUri())
                 .build();
     }
@@ -135,15 +137,15 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public static class SongViewHolder extends RecyclerView.ViewHolder{
         //members
         ImageView artworkHolder;
-        TextView titleHolder,durationHolder,sizeHolder;
+        TextView titleHolder,durationHolder,sizeHolder,artistHolder;
 
         public SongViewHolder(@NonNull View itemView) {
             super(itemView);
-
             artworkHolder = itemView.findViewById(R.id.artworkView);
             titleHolder = itemView.findViewById(R.id.titleView);
             durationHolder = itemView.findViewById(R.id.durationView);
             sizeHolder = itemView.findViewById(R.id.sizeView);
+            artistHolder = itemView.findViewById(R.id.artistView);
         }
     }
 
