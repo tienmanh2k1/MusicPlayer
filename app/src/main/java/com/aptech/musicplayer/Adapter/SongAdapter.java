@@ -1,4 +1,4 @@
-package com.aptech.musicplayer;
+package com.aptech.musicplayer.Adapter;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -18,6 +18,10 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.aptech.musicplayer.MainActivity;
+import com.aptech.musicplayer.PlayerService;
+import com.aptech.musicplayer.R;
+import com.aptech.musicplayer.Song;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.MediaMetadata;
@@ -83,7 +87,7 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         //player song on item click
         viewHolder.itemView.setOnClickListener(view -> {
             //start player service
-            context.startService(new Intent(context.getApplicationContext(),PlayerService.class));
+            context.startService(new Intent(context.getApplicationContext(), PlayerService.class));
             //playing song
             if (!player.isPlaying()){
                 player.setMediaItems(getMediaItem(),position,0);

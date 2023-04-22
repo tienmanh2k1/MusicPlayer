@@ -11,6 +11,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Binder;
 import android.os.IBinder;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -30,6 +31,7 @@ public class PlayerService extends Service {
 
     //player
     ExoPlayer player;
+    TextView homePlayPauseBtn;
     PlayerNotificationManager playerNotificationManager;
 
     //class binder for client

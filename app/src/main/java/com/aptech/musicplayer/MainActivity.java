@@ -41,6 +41,7 @@ import androidx.palette.graphics.Palette;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.aptech.musicplayer.Adapter.SongAdapter;
 import com.chibde.visualizer.BarVisualizer;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
@@ -65,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
 
     //today
     ExoPlayer player;
-    ActivityResultLauncher<String> recordAudioPermissionLauncher; //to be accessed in the song adapter
+    public ActivityResultLauncher<String> recordAudioPermissionLauncher; //to be accessed in the song adapter
     final String recordAudioPermission = Manifest.permission.RECORD_AUDIO;
     ConstraintLayout playerView;
     //controls
@@ -163,6 +164,9 @@ public class MainActivity extends AppCompatActivity {
         //blur image view
         blurImageView = findViewById(R.id.blurImageView);
 
+
+
+
         //launch storage permission on create
         //storagePermissionLauncher.launch(permission);
 
@@ -174,7 +178,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void doBinderService() {
-        Intent playerServiceIntent = new Intent(this,PlayerService.class);
+            Intent playerServiceIntent = new Intent(this,PlayerService.class);
         bindService(playerServiceIntent,playerServiceConnection, Context.BIND_AUTO_CREATE);
     }
 
@@ -251,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
                 //update player view color
                 updatePlayerColors();
 
-                if (!player.isPlaying()){
+                if (player.isPlaying()){
                     player.play();
                 }
 
@@ -354,7 +358,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void playOrPausePlayer() {
+    public void playOrPausePlayer() {
         if (player.isPlaying()){
             player.pause();
             playPauseBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_play_circle_outline,0,0,0);
